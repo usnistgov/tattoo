@@ -1,2 +1,2 @@
-# tattoo
-Tattoo Recognition Technology Program
+# Tattoo Recognition Technology Program
+The NIST Tattoo Recognition Technology Program features a family of activities designed with goals to measure and assess image-based tattoo recognition technology to support law enforcement utility of tattoos in operations. Activities include challenge problems, workshops, best practice guidelines, sequestered evaluations, and published reports with outcomes and recommendations.
