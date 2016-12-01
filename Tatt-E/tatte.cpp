@@ -14,7 +14,6 @@
  * how the functions are implemented.
  */
 #include <memory>
-
 #include "tatte.h"
 
 /*********************************
