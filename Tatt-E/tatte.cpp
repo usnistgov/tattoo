@@ -14,7 +14,8 @@
  * how the functions are implemented.
  */
 #include <memory>
-#include <tatte.h>
+
+#include "tatte.h"
 
 /*********************************
  * TattooRep class definition
