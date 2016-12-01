@@ -10,7 +10,7 @@
 
 /*
  * Defines data types and functions as described in the Tatt-E "Concept,
- * Evaluation Plan and API" available at
+ * Evaluation Plan, and API" available at
  * https://www.nist.gov/programs-projects/tattoo-recognition-technology-evaluation-tatt-e
  */
 
@@ -31,7 +31,9 @@ enum class ImageType {
 	/** Tattoo image */
 	Tattoo = 0,
 	/** Sketch of tattoo */
-	Sketch = 1
+	Sketch = 1,
+	/** Unknown */
+	Unknown = 2
 };
 
 /**
@@ -57,7 +59,7 @@ typedef struct Image {
 		width{0},
 		height{0},
 		depth{24},
-		imageType{ImageType::Tattoo}
+		imageType{ImageType::Unknown}
 		{}
 
 	Image(
@@ -83,6 +85,7 @@ typedef struct Image {
  * @brief
  * Data structure representing a set of the same tattoo images 
  * from a single person
+ *
  * @details
  * The set of tattoo objects used to pass the image(s) and attribute(s) to
  * the template extraction process.
@@ -104,6 +107,7 @@ enum class TemplateRole {
 /**
  * @brief
  * Structure for bounding box around a detected tattoo
+ *
  * @param x
  * X-coordinate of top-left corner of bounding box around tattoo
  * @param y
@@ -254,6 +258,7 @@ enum class ReturnCode {
  * @brief
  * A structure to contain information about a failure by the software
  * under test.
+ *
  * @details
  * An object of this class allows the software to return some information
  * from a function call. The string within this object can be optionally
@@ -283,6 +288,7 @@ typedef struct ReturnStatus {
 
 	/** @brief Return status code */
 	TattE::ReturnCode code;
+
 	/** @brief Optional information string */
 	std::string info;
 
@@ -297,8 +303,10 @@ typedef struct Candidate {
 	/** @brief If the candidate is valid, this should be set to true. If 
 	 * the candidate computation failed, this should be set to false. */
 	bool isAssigned;
+
 	/** @brief The template ID from the enrollment database manifest */
 	std::string templateId;
+
 	/** @brief Measure of similarity between the identification template 
 	 * and the enrolled candidate.  Higher scores mean more likelihood that 
 	 * the samples are of the same person.  An algorithm is free to assign 
@@ -332,6 +340,7 @@ class IdentificationInterface;
 
 /**
  * @brief The interface to Class I implementations.
+ *
  * @details The Class I submission software under test will implement 
  * this interface by subclassing this class and implementing each method 
  * therein.
@@ -370,6 +379,7 @@ public:
 	 * <br>For identification templates: If the function returns a 
 	 * non-successful return status, the output template will be not be used 
 	 * in subsequent search operations.
+	 *
 	 * @param[in] inputTattoos
 	 * An instance of a MultiTattoo structure.  Implementations must alter 
 	 * their behavior according to the type and number of images/type of 
@@ -387,15 +397,19 @@ public:
 	 * enrollment template used for gallery enrollment or an identification 
 	 * template used for search.
 	 * @param[out] tattooTemplate
-	 * Tattoo template object.  For each tattoo detected in the MultiTattoo, the function shall provide
-	 * the bounding box coordinates in each image.
+	 * Tattoo template object.  For each tattoo detected in the MultiTattoo, 
+	 * the function shall provide the bounding box coordinates in each image.
 	 * The bounding boxes shall be captured in the TattooRep.boundingBoxes 
 	 * variable, which is a vector of BoundingBox objects.
 	 * If there are 4 images in the MultiTattoo vector, then the size of 
 	 * boundingBoxes shall be 4.  boundingBoxes[i] is associated with 
 	 * MultiTattoo[i].
 	 * @param[out] quality
-	 * A measure of tattoo quality on [0,1] indicative of expected utility to
+	 * A vector of quality values, one for each input tattoo image.  
+	 * This will be an empty vector when passed into this function, and 
+	 * the implementation shall populate a quality value corresponding to each 
+	 * input image.  quality[i] shall correspond to inputTattoos[i].
+	 * A measure of tattoo quality on [0,1] is indicative of expected utility to
 	 * the matcher, or matchability.  This value could measure tattoo
 	 * distinctiveness/information richness, and would be an indicator of
 	 * how well the tattoo would be expected to match.
@@ -408,12 +422,13 @@ public:
 		const MultiTattoo &inputTattoos,
 		const TemplateRole &templateType,
 		TattooRep &tattooTemplate,
-		double &quality) = 0;
+		std::vector<double> &quality) = 0;
 
 	/**
 	 * @brief This function will be called after all enrollment templates have 
 	 * been created and freezes the enrollment data.
 	 * After this call the enrollment dataset will be forever read-only.
+	 *
 	 * @details This function allows the implementation to conduct,
 	 * for example, statistical processing of the feature data, indexing and 
 	 * data re-organization.  The function may create its own data structure.  
@@ -428,6 +443,7 @@ public:
 	 * after the call.  Implementations must,
 	 * <b>at a minimum, copy the input data</b> or otherwise extract what is 
 	 * needed for search.
+	 *
 	 * @param[in] enrollmentDirectory
 	 * The top-level directory in which enrollment data was placed. This 
 	 * variable allows an implementation
@@ -459,6 +475,7 @@ public:
 	 * @brief Before MultiTattoos are sent to the probe template
 	 * creation function, the test harness will call this initialization 
 	 * function.
+	 *
 	 * @details This function initializes the implementation
 	 * under test and sets all needed parameters.  This function will be 
 	 * called N=1 times by the NIST application,
@@ -467,6 +484,7 @@ public:
 	 * on the one or more machines each of which may be reading from this same 
 	 * enrollment directory in parallel.  The implementation has read-only 
 	 * access to its prior enrollment data.
+	 *
 	 * @param[in] configurationLocation
 	 * A read-only directory containing any developer-supplied configuration 
 	 * parameters or run-time data files.
@@ -485,6 +503,7 @@ public:
 	 * identifyTemplate.  The function might set static internal variables 
 	 * so that the enrollment database is available to the subsequent 
 	 * identification searches.
+	 *
 	 * @param[in] configurationLocation
 	 * A read-only directory containing any developer-supplied configuration 
 	 * parameters or run-time data files.
@@ -499,11 +518,13 @@ public:
 	/** @brief This function searches an identification template against the 
 	 * enrollment set, and outputs a
 	 * vector containing candidateListLength Candidates.
+	 *
 	 * @details Each candidate shall be populated by the implementation
 	 * and added to candidateList.  Note that candidateList will be an empty 
 	 * vector when passed into this function.  The candidates shall appear in 
 	 * descending order of similarity score - i.e. most similar entries appear 
 	 * first.
+	 *
 	 * @param[in] idTemplate
 	 * A template from createTemplate().  If the value returned by that 
 	 * function was non-successful, the contents of idTemplate will not be 
@@ -525,6 +546,7 @@ public:
 	 * @brief
 	 * Factory method to return a managed pointer to the IdentificationInterface 
 	 * object.
+	 *
 	 * @details
 	 * This function is implemented by the submitted library and must return
 	 * a managed pointer to the IdentificationInterface object.
@@ -545,6 +567,7 @@ class DetectAndLocalizeInterface;
 
 /**
  * @brief The interface to Class D implementations.
+ *
  * @details
  * The class D detection and localization software under test must implement
  * the interface DetectAndLocalizeInterface by subclassing this class and
@@ -574,6 +597,7 @@ public:
 	/**
 	 * @brief This function takes an Image as input and indicates
 	 * whether a tattoo was detected in the image or not.
+	 *
 	 * @param[in] inputImage
 	 * An instance of an Image struct representing a single image
 	 * @param[out] tattooDetected
@@ -594,6 +618,7 @@ public:
 	/**
 	 * @brief This function takes an Image as input, and populates a vector of 
 	 * BoundingBox with the number of tattoos detected from the input image.
+	 *
 	 * @param[in] inputImage
 	 * An instance of an Image struct representing a single image
 	 * @param[out] boundingBoxes
@@ -610,6 +635,7 @@ public:
 	 * @brief
 	 * Factory method to return a managed pointer to the 
 	 * DetectAndLocalizeInterface object.
+	 *
 	 * @details
 	 * This function is implemented by the submitted library and must return
 	 * a managed pointer to the DetectAndLocalizeInterface object.
