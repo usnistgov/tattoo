@@ -46,7 +46,7 @@ typedef struct Image {
 	/** @brief Number of pixels vertically */
 	uint16_t height;
 	/** @brief Number of bits per pixel. Legal values are 8 and 24. */
-	uint16_t depth;
+	uint8_t depth;
 	/** @brief Label describing the type of image */
 	ImageType imageType;
 	/** @brief managed pointer to raster scanned data.
