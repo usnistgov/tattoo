@@ -5,6 +5,7 @@ operationally relevant use cases, including tattoo identification, region of int
 tattoo detection/localization, and matching sketches.
 
 **Website:** https://www.nist.gov/programs-projects/tattoo-recognition-technology-evaluation-tatt-e
+**Email:** tatt-e@nist.gov
 
 
 
