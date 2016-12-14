@@ -6,7 +6,7 @@ Tatt-E is being initiated by NIST to assess and measure the capability of system
 - Tattoo detection/localization – determining whether an image contains a tattoo and if so, segmentation of the tattoo.
 - Sketches – matching sketches to tattoos.
 
-**Participation**:  Interested participants need to follow the instructions detailed in the Tatt-E Concept, Evaluation Plan, and API document.  The final version of this document, and its C++ interface header are now online. Implementers should conform to this API and submit algorithms to NIST following the schedule published on the Tatt-E website.  
+**Participation**:  Interested participants need to follow the instructions detailed in the [Tatt-E Concept, Evaluation Plan, and API document](https://www.nist.gov/sites/default/files/documents/2016/12/01/tatt-e_api.pdf).  The final version of this document, and its C++ interface header are now online. Implementers should conform to this API and submit algorithms to NIST following the schedule published on the Tatt-E website.  
 
 **Website:** https://www.nist.gov/programs-projects/tattoo-recognition-technology-evaluation-tatt-e
 
