@@ -3,7 +3,7 @@
  * Technology (NIST) by employees of the Federal Government in the course
  * of their official duties. Pursuant to title 17 Section 105 of the
  * United States Code, this software is not subject to copyright protection
- * and is in the public domain. NIST assumes no responsibility  whatsoever for
+ * and is in the public domain. NIST assumes no responsibility whatsoever for
  * its use by other parties, and makes no guarantees, expressed or implied,
  * about its quality, reliability, or any other characteristic.
  */
@@ -11,7 +11,7 @@
 /*
  * Defines data types and functions as described in the Tatt-E "Concept,
  * Evaluation Plan, and API" available at
- * https://www.nist.gov/programs-projects/tattoo-recognition-technology-evaluation-tatt-e
+ * https://nigos.nist.gov/tatt-e/tatt-e_api.pdf 
  */
 
 #ifndef TATTE_H_
@@ -23,24 +23,25 @@
 #include <memory>
 
 namespace TattE {
-/**
- * @brief
- * Labels describing the image type
- */
-enum class ImageType {
-	/** Tattoo image */
-	Tattoo = 0,
-	/** Sketch of tattoo */
-	Sketch = 1,
-	/** Unknown */
-	Unknown = 2
-};
 
 /**
  * @brief
  * Struct representing a single image
  */
 typedef struct Image {
+	/**
+	 * @brief
+	 * Labels describing the image type
+	 */
+	enum class ImageType {
+		/** Tattoo image */
+		Tattoo = 0,
+		/** Sketch of tattoo */
+		Sketch = 1,
+		/** Unknown */
+		Unknown = 2
+	};
+
 	/** @brief Number of pixels horizontally */
 	uint16_t width;
 	/** @brief Number of pixels vertically */
@@ -59,38 +60,27 @@ typedef struct Image {
 		width{0},
 		height{0},
 		depth{24},
-		imageType{ImageType::Unknown}
+		imageType{ImageType::Tattoo}
 		{}
 
 	Image(
-		uint16_t widthin,
-		uint16_t heightin,
-		uint8_t depthin,
-		ImageType typein,
-		std::shared_ptr<uint8_t> datain
+		uint16_t width,
+		uint16_t height,
+		uint8_t depth,
+		std::shared_ptr<uint8_t> &data,
+		ImageType type
 		) :
-		width{widthin},
-		height{heightin},
-		depth{depthin},
-		imageType{typein},
-		data{datain}
+		width{width},
+		height{height},
+		depth{depth},
+		data{data},
+		imageType{type}
 		{}
 
 	/** @brief This function returns the size of the image data. */
 	size_t
 	size() const { return (width * height * (depth / 8)); }
 } Image;
-
-/**
- * @brief
- * Data structure representing a set of the same tattoo images 
- * from a single person
- *
- * @details
- * The set of tattoo objects used to pass the image(s) and attribute(s) to
- * the template extraction process.
- */
-typedef std::vector<Image> MultiTattoo;
 
 /**
  * @brief
@@ -143,70 +133,19 @@ typedef struct BoundingBox {
 		{}
 
 	BoundingBox(
-		uint16_t xin,
-		uint16_t yin,
-		uint16_t widthin,
-		uint16_t heightin,
-		double confin
+		uint16_t x,
+		uint16_t y,
+		uint16_t width,
+		uint16_t height,
+		double confidence
 		) :
-		x{xin},
-		y{yin},
-		width{widthin},
-		height{heightin},
-		confidence{confin}
+		x{x},
+		y{y},
+		width{width},
+		height{height},
+		confidence{confidence}
 		{}
 } BoundingBox;
-
-/**
- * @brief
- * Class representing a tattoo or sketch template from image(s)
- */
-class TattooRep {
-public:
-	/** @brief Default Constructor */
-	TattooRep();
-
-	/** @brief This function should be used to add bounding box entries for
-	 * each input image provided to the implementation for template generation.
-	 * If there are 4 images in the MultiTattoo vector, then the size of
-	 * boundingBoxes shall be 4.  boundingBoxes[i] is associated with 
-	 * MultiTattoo[i]. */
-	void
-	addBoundingBox(const BoundingBox &bb);
-
-	/** @brief This function takes a size parameter and allocates memory of size
-	 * and returns a managed pointer to the newly allocated memory for 
-	 * implementation manipulation.  This class will take care of all 
-	 * memory allocation and de-allocation of its own memory.  
-	 * The implementation shall not de-allocate memory created by this class. */
-	std::shared_ptr<uint8_t>
-	resizeTemplate(uint64_t size);
-
-	/** @brief This function returns a managed pointer to uint8_t to the 
-	 * template data. */
-	std::shared_ptr<uint8_t>
-	getTattooTemplatePtr() const;
-
-	/** @brief This function returns the size of the template data. */
-	uint64_t
-	getTemplateSize() const;
-
-	/** @brief This function returns the bounding boxes for detected tattoos
-	 associated with the input images */
-	std::vector<BoundingBox>
-	getBoundingBoxes() const;
-
-private:
-	/** @brief Proprietary template data representing a tattoo in images(s) */
-	std::shared_ptr<uint8_t> tattooTemplate;
-
-	/** @brief Size of template */
-	uint64_t templateSize;
-
-	/** @brief Data structure for capturing bounding boxes around the detected 
-	 * tattoo(s) */
-	std::vector<BoundingBox> boundingBoxes;
-};
 
 /**
  * @brief
@@ -217,41 +156,43 @@ enum class ReturnCode {
 	/** Success */
 	Success = 0,
 	/** Error reading configuration files */
-	ConfigError,
+	ConfigError = 1,
 	/**
 	 * Image type, e.g., sketches, is not supported by
 	 * the implementation
 	 */
-	ImageTypeNotSupported,
+	ImageTypeNotSupported = 2,
 	/** Elective refusal to process the input */
-	RefuseInput,
+	RefuseInput = 3,
 	/** Involuntary failure to process the image */
-	ExtractError,
+	ExtractError = 4,
 	/** Cannot parse the input data */
-	ParseError,
+	ParseError = 5,
 	/**
 	 * Elective refusal to produce a template
 	 */
-	TemplateCreationError,
+	TemplateCreationError = 6,
 	/**
 	 * An operation on the enrollment directory
 	 * failed (e.g. permission, space)
 	 */
-	EnrollDirError,
+	EnrollDirError = 7,
 	/** The implementation cannot support the number of input images */
-	NumDataError,
+	NumDataError = 8,
 	/**
 	 * One or more template files are in an incorrect
 	 * format or defective
 	 */
-	TemplateFormatError,
+	TemplateFormatError = 9,
 	/**
 	 * Cannot locate the input data - the input
 	 * files or names seem incorrect
 	 */
-	InputLocationError,
+	InputLocationError = 10,
 	/** Vendor-defined failure */
-	VendorError
+	VendorError = 11,
+	/** Function is not implemented */
+    NotImplemented = 12
 };
 
 /**
@@ -287,13 +228,24 @@ typedef struct ReturnStatus {
 		{}
 
 	/** @brief Return status code */
-	TattE::ReturnCode code;
+	ReturnCode code;
 
 	/** @brief Optional information string */
 	std::string info;
 
 } ReturnStatus;
 
+/**
+ * @brief
+ * Labels describing the composition of the 1:N gallery
+ * (provided as input into gallery finalization function)
+ */
+enum class GalleryType {
+	/** Consolidated, subject-based enrollment */
+    Consolidated = 0,
+    /** Unconsolidated, event-based or photo-based enrollment */
+    Unconsolidated = 1
+};
 
 /**
  * @brief
@@ -318,54 +270,55 @@ typedef struct Candidate {
 	Candidate() :
 		isAssigned(false),
 		templateId(""),
-		similarityScore(0.0)
+		similarityScore(-1.0)
 		{}
 
 	Candidate(
-		bool assignedin,
-		std::string idin,
-		double scorein) :
-		isAssigned(assignedin),
-		templateId(idin),
-		similarityScore(scorein)
+		bool assigned,
+		std::string id,
+		double score) :
+		isAssigned(assigned),
+		templateId(id),
+		similarityScore(score)
 		{}
 } Candidate;
 
 /* API functions to be implemented */
 
-/**********************************
- * Class I: 1:N Identification
- **********************************/
-class IdentificationInterface;
-
 /**
- * @brief The interface to Class I implementations.
+ * @brief The interface to Tatt-E implementations.
  *
- * @details The Class I submission software under test will implement 
+ * @details The submission software under test will implement 
  * this interface by subclassing this class and implementing each method 
  * therein.
  */
-class IdentificationInterface {
+class Interface {
 public:
-	virtual ~IdentificationInterface() {}
+	virtual ~Interface() {}
 
-	/** @brief This function initializes the implementation under test and sets 
-	 * all needed parameters.
+	/** @brief REQUIRED.  This function initializes the implementation under test and sets 
+	 * all needed parameters for template creation.
 	 *
 	 * @details This function will be called N=1 times by the NIST application,
 	 * prior to parallelizing M >= 1 calls to createTemplate() via fork().
 	 *
-	 * @param[in] configurationLocation
+	 * @param[in] configDir
 	 * A read-only directory containing any developer-supplied configuration 
 	 * parameters or run-time data files.
+    * @param[in] role
+     * A value from the TemplateRole enumeration that indicates the intended
+     * usage of the template to be generated.  In this case, either a 1:N
+     * enrollment template used for gallery enrollment or 1:N identification
+     * template used for search.
 	 */
 	virtual ReturnStatus
-	initializeEnrollmentSession(
-		const std::string &configurationLocation) = 0;
+	initializeTemplateCreation(
+		const std::string &configDir,
+		TemplateRole role) = 0;
 
 	/**
-	 * @brief This function takes a MultiTattoo and outputs a TattooRep object 
-	 * (essentially a template).
+	 * @brief REQUIRED.  This function takes an input vector of tattoos and outputs a template, 
+	 * bounding boxes, and quality values. 
 	 *
 	 * @details For enrollment templates: If the function
 	 * executes correctly (i.e. returns a successful exit status), the NIST 
@@ -374,58 +327,61 @@ public:
 	 * finalization function.  When the implementation fails to produce a 
 	 * template, it shall still return a blank template (which can be zero 
 	 * bytes in length). The template will be included in the
-	 * enrollment database/manifest like all other enrollment templates, but 
+	 * enrollment database/manifest like all other enrollment templates but 
 	 * is not expected to contain any feature information.
 	 * <br>For identification templates: If the function returns a 
-	 * non-successful return status, the output template will be not be used 
+	 * non-successful return status, the output template will not be used 
 	 * in subsequent search operations.
 	 *
-	 * @param[in] inputTattoos
-	 * An instance of a MultiTattoo structure.  Implementations must alter 
+	 * @param[in] tattoos
+	 * A vector of the same tattoo from the same person.  Implementations must alter 
 	 * their behavior according to the type and number of images/type of 
 	 * image contained in the structure.  The input image type could be a 
 	 * tattoo or a sketch image.
-	 * The MultiTattoo will always contain the same type of imagery, 
+	 * The vector of tattoos will always contain the same type of imagery, 
 	 * i.e., no mixing of tattoos and sketch images will occur.  
 	 * <b>Note that implementation support for
 	 * sketch images is OPTIONAL.  Implementation shall return
-	 * TattE::ImageType::ImageTypeNotSupported if they do not support sketch 
+	 * TattE::ImageType::ImageTypeNotSupported if they do not support sketch
 	 * images.  All algorithms must support tattoo images. </b>
-	 * @param[in] templateType
+	 * @param[in] role
 	 * A value from the TemplateRole enumeration that indicates the intended 
 	 * usage of the template to be generated.  In this case, either an 
 	 * enrollment template used for gallery enrollment or an identification 
 	 * template used for search.
-	 * @param[out] tattooTemplate
-	 * Tattoo template object.  For each tattoo detected in the MultiTattoo, 
+     * @param[out] templ
+     * The output template.  The format is entirely unregulated.  This will be
+     * an empty vector when passed into the function, and the implementation can
+     * resize and populate it with the appropriate data.
+	 * @param[out] boundingBoxes
+	 * For each tattoo in the input vector of tattoos,
 	 * the function shall provide the bounding box coordinates in each image.
-	 * The bounding boxes shall be captured in the TattooRep.boundingBoxes 
-	 * variable, which is a vector of BoundingBox objects.
-	 * If there are 4 images in the MultiTattoo vector, then the size of 
-	 * boundingBoxes shall be 4.  boundingBoxes[i] is associated with 
-	 * MultiTattoo[i].
+	 * If there are 4 images in the input vector, then the size of 
+	 * boundingBoxes shall be 4, that is, boundingBoxes[i] is associated with 
+	 * tattoos[i].
 	 * @param[out] quality
 	 * A vector of quality values, one for each input tattoo image.  
 	 * This will be an empty vector when passed into this function, and 
 	 * the implementation shall populate a quality value corresponding to each 
-	 * input image.  quality[i] shall correspond to inputTattoos[i].
+	 * input image.  quality[i] shall correspond to tattoos[i].
 	 * A measure of tattoo quality on [0,1] is indicative of expected utility to
 	 * the matcher, or matchability.  This value could measure tattoo
-	 * distinctiveness/information richness, and would be an indicator of
+	 * distinctiveness/information richness and would be an indicator of
 	 * how well the tattoo would be expected to match.
 	 * A value of 1 indicates high quality and that the tattoo would be expected
 	 * to match well, and a value of 0 indicates low quality indicative that
-	 * tattoo would not would not match well.
+	 * tattoo would not match well.
 	 */
 	virtual ReturnStatus
 	createTemplate(
-		const MultiTattoo &inputTattoos,
-		const TemplateRole &templateType,
-		TattooRep &tattooTemplate,
+		const std::vector<Image> &tattoos,
+		const TemplateRole &role,
+		std::vector<uint8_t> &templ,
+		std::vector<BoundingBox> &boundingBoxes,
 		std::vector<double> &quality) = 0;
 
 	/**
-	 * @brief This function will be called after all enrollment templates have 
+	 * @brief REQUIRED.  This function will be called after all enrollment templates have 
 	 * been created and freezes the enrollment data.
 	 * After this call the enrollment dataset will be forever read-only.
 	 *
@@ -444,7 +400,9 @@ public:
 	 * <b>at a minimum, copy the input data</b> or otherwise extract what is 
 	 * needed for search.
 	 *
-	 * @param[in] enrollmentDirectory
+     * @param[in] configDir
+     * A read-only directory containing any developer-supplied configuration
+	 * @param[in] enrollmentDir
 	 * The top-level directory in which enrollment data was placed. This 
 	 * variable allows an implementation
 	 * to locate any private initialization data it elected to place in the 
@@ -464,58 +422,34 @@ public:
 	 * The file may be opened directly.  It is not necessary to prepend a 
 	 * directory name.  This is a NIST-provided
 	 * input - implementers shall not internally hard-code or assume any values.
+     * @param[in] galleryType
+     * The composition of the gallery as enumerated by GalleryType.
 	 */
 	virtual ReturnStatus
 	finalizeEnrollment(
-		const std::string &enrollmentDirectory,
+		const std::string &configDir,
+		const std::string &enrollmentDir,
 		const std::string &edbName,
-		const std::string &edbManifestName) = 0;
+		const std::string &edbManifestName,
+		const GalleryType &galleryType) = 0;
 
-	/**
-	 * @brief Before MultiTattoos are sent to the probe template
-	 * creation function, the test harness will call this initialization 
-	 * function.
-	 *
-	 * @details This function initializes the implementation
-	 * under test and sets all needed parameters.  This function will be 
-	 * called N=1 times by the NIST application,
-	 * prior to parallelizing M >= 1 calls to createTemplate() via fork().
-	 * Caution: The implementation should tolerate execution of P > 1 processes 
-	 * on the one or more machines each of which may be reading from this same 
-	 * enrollment directory in parallel.  The implementation has read-only 
-	 * access to its prior enrollment data.
-	 *
-	 * @param[in] configurationLocation
-	 * A read-only directory containing any developer-supplied configuration 
-	 * parameters or run-time data files.
-	 * @param[in] enrollmentDirectory
-	 * The read-only top-level directory in which enrollment data was placed 
-	 * and then finalized by the implementation.
-	 * The implementation can parameterize subsequent template production on 
-	 * the basis of the enrolled dataset.
-	 */
-	virtual ReturnStatus
-	initializeProbeTemplateSession(
-		const std::string &configurationLocation,
-		const std::string &enrollmentDirectory) = 0;
-
-	/** @brief This function will be called once prior to one or more calls to 
+	/** @brief REQUIRED.  This function will be called once prior to one or more calls to 
 	 * identifyTemplate.  The function might set static internal variables 
 	 * so that the enrollment database is available to the subsequent 
 	 * identification searches.
 	 *
-	 * @param[in] configurationLocation
+	 * @param[in] configDir
 	 * A read-only directory containing any developer-supplied configuration 
 	 * parameters or run-time data files.
-	 * @param[in] enrollmentDirectory
+	 * @param[in] enrollmentDir
 	 * The read-only top-level directory in which enrollment data was placed.
 	 */
 	virtual ReturnStatus
-	initializeIdentificationSession(
-		const std::string &configurationLocation,
-		const std::string &enrollmentDirectory) = 0;
+	initializeIdentification(
+		const std::string &configDir,
+		const std::string &enrollmentDir) = 0;
 
-	/** @brief This function searches an identification template against the 
+	/** @brief REQUIRED.  This function searches an identification template against the 
 	 * enrollment set, and outputs a
 	 * vector containing candidateListLength Candidates.
 	 *
@@ -538,117 +472,101 @@ public:
 	 */
 	virtual ReturnStatus
 	identifyTemplate(
-		const TattooRep &idTemplate,
+		const std::vector<uint8_t> &idTemplate,
 		const uint32_t candidateListLength,
 		std::vector<Candidate> &candidateList) = 0;
 
+    /**
+     * @brief REQUIRED.  This function initializes the implementation under test.  It will
+     * be called by the NIST application before any call to the functions
+     * detectTattoo() and detectSyntheticTattoo().
+     *
+     * @param[in] configDir
+     * A read-only directory containing any developer-supplied configuration
+     * parameters or run-time data.  The name of this directory is assigned by
+     * NIST, not hardwired by the provider.  The names of the
+     * files in this directory are hardwired in the implementation and are
+     * unrestricted.
+     */
+    virtual ReturnStatus
+    initializeDetection(
+        const std::string &configDir) = 0;
+
+    /**
+     * @brief REQUIRED.  This function takes an Image as input and indicates
+     * whether a tattoo on skin was detected in the image or not.
+     *
+     * @param[in] inputImage
+     * An instance of an Image struct representing a single image
+     * @param[out] tattooDetected
+     * true if a tattoo on skin is detected in the image;
+     * false otherwise
+     * @param[out] confidence
+     * A real-valued measure of tattoo detection confidence on [0,1].
+     * A value of 1 indicates certainty that the image contains a tattoo,
+     * and a value of 0 indicates certainty that the image does not contain a
+     * tattoo.
+     */
+    virtual ReturnStatus
+    detectTattoo(
+        const Image &inputImage,
+        bool &tattooDetected,
+        double &confidence) = 0;
+
+    /**
+     * @brief OPTIONAL.  This function takes an Image as input and indicates
+     * whether the tattoo image is synthetically generated/synthetically modified or not.
+     *
+     * @param[in] inputImage
+     * An instance of an Image struct representing a single image
+     * @param[out] isSynthetic
+     * true if the algorithm determines that the tattoo is synthetically generated/synthetically modified; 
+     * false otherwise
+     * @param[out] confidence
+     * A real-valued measure of confidence on [0,1].
+     * A value of 1 indicates certainty that the image is synthetic or synthetically modified,
+     * and a value of 0 indicates certainty that the image is real and not modified.
+     */
+    virtual ReturnStatus
+    detectSyntheticTattoo(
+        const Image &inputImage,
+        bool &isSynthetic,
+        double &confidence) = 0;
+
 	/**
-	 * @brief
-	 * Factory method to return a managed pointer to the IdentificationInterface 
+	 * @brief REQUIRED.  Factory method to return a managed pointer to the Interface 
 	 * object.
 	 *
 	 * @details
 	 * This function is implemented by the submitted library and must return
-	 * a managed pointer to the IdentificationInterface object.
+	 * a managed pointer to the Interface object.
 	 *
 	 * @note
 	 * A possible implementation might be:
-	 * return (std::make_shared<ImplementationC>());
+	 * return (std::make_shared<Implementation>());
 	 */
-	static std::shared_ptr<IdentificationInterface>
+	static std::shared_ptr<Interface>
 	getImplementation();
 };
-/* End of Class I */
 
-/**********************************
- * Class D: Detection and Localization
- **********************************/
-class DetectAndLocalizeInterface;
-
-/**
- * @brief The interface to Class D implementations.
+/*
+ * API versioning
  *
- * @details
- * The class D detection and localization software under test must implement
- * the interface DetectAndLocalizeInterface by subclassing this class and
- * implementing each method specified therein.
+ * NIST code will extern the version number symbols.
+ * Participant shall compile them into their core library.
  */
-class DetectAndLocalizeInterface {
-public:
-	virtual ~DetectAndLocalizeInterface() {}
+#ifdef NIST_EXTERN_API_VERSION
+/** API major version number. */
+extern uint16_t API_MAJOR_VERSION;
+/** API minor version number. */
+extern uint16_t API_MINOR_VERSION;
+#else /* NIST_EXTERN_API_VERSION */
+/** API major version number. */
+uint16_t API_MAJOR_VERSION{0};
+/** API minor version number. */
+uint16_t API_MINOR_VERSION{1};
+#endif /* NIST_EXTERN_API_VERSION */
 
-	/**
-	 * @brief This function initializes the implementation under test.  It will 
-	 * be called by the NIST application before any call to the functions 
-	 * detectTattoo() and localizeTattoos().
-	 *
-	 * @param[in] configurationLocation
-	 * A read-only directory containing any developer-supplied configuration 
-	 * parameters or run-time data.  The name of this directory is assigned by 
-	 * NIST, not hardwired by the provider.  The names of the
-	 * files in this directory are hardwired in the implementation and are 
-	 * unrestricted.
-	 */
-	virtual ReturnStatus
-	initialize(
-		const std::string &configurationLocation) = 0;
-
-
-	/**
-	 * @brief This function takes an Image as input and indicates
-	 * whether a tattoo was detected in the image or not.
-	 *
-	 * @param[in] inputImage
-	 * An instance of an Image struct representing a single image
-	 * @param[out] tattooDetected
-	 * true if a tattoo is detected in the image;
-	 * false otherwise
-	 * @param[out] confidence
-	 * A real-valued measure of tattoo detection confidence on [0,1].
-	 * A value of 1 indicates certainty that the image contains a tattoo,
-	 * and a value of 0 indicates certainty that the image does not contain a 
-	 * tattoo.
-	 */
-	virtual ReturnStatus
-	detectTattoo(
-		const Image &inputImage,
-		bool &tattooDetected,
-		double &confidence) = 0;
-
-	/**
-	 * @brief This function takes an Image as input, and populates a vector of 
-	 * BoundingBox with the number of tattoos detected from the input image.
-	 *
-	 * @param[in] inputImage
-	 * An instance of an Image struct representing a single image
-	 * @param[out] boundingBoxes
-	 * For each tattoo detected in the image, the function shall create a
-	 * BoundingBox, populate it with a confidence score, the x, y, width, 
-	 * height of the bounding box, and add it to the vector.
-	 */
-	virtual ReturnStatus
-	localizeTattoos(
-		const Image &inputImage,
-		std::vector<BoundingBox> &boundingBoxes) = 0;
-
-	/**
-	 * @brief
-	 * Factory method to return a managed pointer to the 
-	 * DetectAndLocalizeInterface object.
-	 *
-	 * @details
-	 * This function is implemented by the submitted library and must return
-	 * a managed pointer to the DetectAndLocalizeInterface object.
-	 *
-	 * @note
-	 * A possible implementation might be:
-	 * return (std::make_shared<ImplementationD>());
-	 */
-	static std::shared_ptr<DetectAndLocalizeInterface>
-	getImplementation();
-};
-/* End of Class D */
-	
 } /* End of namespace */
 
 #endif /* TATTE_H_ */
