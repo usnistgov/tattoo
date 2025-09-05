@@ -119,31 +119,24 @@ typedef struct BoundingBox {
 	uint16_t width;
 	/** @brief Height, in pixels, of bounding box around tattoo */
 	uint16_t height;
-	/** @brief Certainty that this region contains a tattoo.  
-	 * This value shall be on [0, 1].
-	 * The higher the value, the more certain. */
-	double confidence;
 
 	BoundingBox() :
 		x{0},
 		y{0},
 		width{0},
-		height{0},
-		confidence{0.0}
+		height{0}
 		{}
 
 	BoundingBox(
 		uint16_t x,
 		uint16_t y,
 		uint16_t width,
-		uint16_t height,
-		double confidence
+		uint16_t height
 		) :
 		x{x},
 		y{y},
 		width{width},
-		height{height},
-		confidence{confidence}
+		height{height}
 		{}
 } BoundingBox;
 
@@ -354,18 +347,21 @@ public:
      * an empty vector when passed into the function, and the implementation can
      * resize and populate it with the appropriate data.
 	 * @param[out] boundingBoxes
-	 * For each tattoo in the input vector of tattoos,
-	 * the function shall provide the bounding box coordinates in each image.
-	 * If there are 4 images in the input vector, then the size of 
-	 * boundingBoxes shall be 4, that is, boundingBoxes[i] is associated with 
-	 * tattoos[i].
+	 * A vector of vector of bounding boxes, one set of bounding boxes for each
+	 * input image. This will be an empty vector when passed into this function.
+     * For each image in the input vector, the function shall provide the 
+	 * bounding box coordinates for tattoos found in each image. If there are 2 images in the 
+	 * input vector, then the size of boundingBoxes shall be 2, that is, boundingBoxes[i] 
+	 * is associated with tattoos[i].  If 3 spatially separate tattoos are found in tattoos[0]
+	 * and 1 tattoo is found in tattoos[1], then the size of boundingBoxes[0] shall be 3, and
+	 * the size of boundingBoxes[1] shall be 1.
 	 * @param[out] quality
-	 * A vector of quality values, one for each input tattoo image.  
+	 * A vector of quality values, one for each input image.  
 	 * This will be an empty vector when passed into this function, and 
 	 * the implementation shall populate a quality value corresponding to each 
 	 * input image.  quality[i] shall correspond to tattoos[i].
 	 * A measure of tattoo quality on [0,1] is indicative of expected utility to
-	 * the matcher, or matchability.  This value could measure tattoo
+	 * the matcher, or matchability.  This value could measure overall tattoo
 	 * distinctiveness/information richness and would be an indicator of
 	 * how well the tattoo would be expected to match.
 	 * A value of 1 indicates high quality and that the tattoo would be expected
@@ -377,7 +373,7 @@ public:
 		const std::vector<Image> &tattoos,
 		const TemplateRole &role,
 		std::vector<uint8_t> &templ,
-		std::vector<BoundingBox> &boundingBoxes,
+		std::vector<std::vector<BoundingBox>> &boundingBoxes,
 		std::vector<double> &quality) = 0;
 
 	/**
@@ -478,8 +474,8 @@ public:
 
     /**
      * @brief REQUIRED.  This function initializes the implementation under test.  It will
-     * be called by the NIST application before any call to the functions
-     * detectTattoo() and detectSyntheticTattoo().
+     * be called by the NIST application before any call to the function
+     * detectTattoo().
      *
      * @param[in] configDir
      * A read-only directory containing any developer-supplied configuration
@@ -506,32 +502,17 @@ public:
      * A value of 1 indicates certainty that the image contains a tattoo,
      * and a value of 0 indicates certainty that the image does not contain a
      * tattoo.
+	 * @param[out] boundingBoxes
+     * For each tattoo detected in the image, the function shall create a
+     * BoundingBox, populate it with the x, y, width,
+     * height of the bounding box, and add it to the vector.
      */
     virtual ReturnStatus
     detectTattoo(
         const Image &inputImage,
         bool &tattooDetected,
-        double &confidence) = 0;
-
-    /**
-     * @brief OPTIONAL.  This function takes an Image as input and indicates
-     * whether the tattoo image is synthetically generated/synthetically modified or not.
-     *
-     * @param[in] inputImage
-     * An instance of an Image struct representing a single image
-     * @param[out] isSynthetic
-     * true if the algorithm determines that the tattoo is synthetically generated/synthetically modified; 
-     * false otherwise
-     * @param[out] confidence
-     * A real-valued measure of confidence on [0,1].
-     * A value of 1 indicates certainty that the image is synthetic or synthetically modified,
-     * and a value of 0 indicates certainty that the image is real and not modified.
-     */
-    virtual ReturnStatus
-    detectSyntheticTattoo(
-        const Image &inputImage,
-        bool &isSynthetic,
-        double &confidence) = 0;
+        double &confidence,
+		std::vector<BoundingBox> &boundingBoxes) = 0;
 
 	/**
 	 * @brief REQUIRED.  Factory method to return a managed pointer to the Interface 
